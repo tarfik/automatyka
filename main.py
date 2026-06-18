@@ -65,7 +65,7 @@ while True:
 
     try:
         mqtt.client.check_msg()
-    except Exception as err"
+    except Exception as err:
         print("[MQTT loop error]", e)
         mqtt_connect()
         print("Error:", err)
