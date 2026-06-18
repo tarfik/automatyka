@@ -2,7 +2,7 @@ import urequests
 import os
 import machine
 
-VERSION_URL = "https://raw.githubusercontent.com/USER/REPO/main/version.json"
+VERSION_URL = "https://raw.githubusercontent.com/tarfik/automatyka/main/version.json"
 
 class OTA:
     def __init__(self):
