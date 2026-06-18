@@ -4,11 +4,12 @@ import time
 from motor import Motor
 from mqtt import MQTT
 from ota import OTA
+from conf import wifi_ssid, wifi_password
 
 def wifi_connect():
     wlan = network.WLAN(network.STA_IF)
     wlan.active(True)
-    wlan.connect("SSID", "PASS")
+    wlan.connect(wifi_ssid, wifi_password)
 
     while not wlan.isconnected():
         time.sleep(1)
