@@ -16,6 +16,7 @@ class MQTT:
     def __init__(self, motor, ota, mqtt_client_id, mqtt_host, mqtt_port, mqtt_user, mqtt_password):
         self.motor = motor
         self.ota = ota
+        self.last_mqtt_ok = None
 
         self.client = MQTTClient(
             mqtt_client_id,
@@ -28,9 +29,24 @@ class MQTT:
         self.client.set_callback(self.callback)
 
     def connect(self):
-        self.client.connect()
-        self.client.subscribe(TOPIC_CMD)
-        self.publish("BOOTED")
+        try:
+            mqtt.set_last_will(TOPIC_STATUS, b"OFFLINE", retain=True)
+    
+            mqtt.set_callback(self.callback)
+            mqtt.connect()
+    
+            mqtt.subscribe(TOPIC_CMD)
+    
+            self.publish("ONLINE")
+    
+            print("[MQTT] Connected")
+            last_mqtt_ok = True
+            return True
+    
+        except Exception as e:
+            print("[MQTT] Connect failed:", e)
+            last_mqtt_ok = False
+            return False
 
     def publish(self, msg):
         self.client.publish(TOPIC_STATUS, msg)
