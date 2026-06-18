@@ -52,9 +52,23 @@ try:
     mqtt.connect()
 
     while True:
+        # watchdog feed
+        wdt.feed()
+        # WIFI check
+        if not ensure_wifi():
+            time.sleep(2)
+            continue
+    
+        # MQTT check
+        if not mqtt.ensure_mqtt():
+            time.sleep(2)
+            continue
+
         try:
             mqtt.client.check_msg()
         except Exception as err"
+            print("[MQTT loop error]", e)
+            mqtt_connect()
             print("Error:", err)
         time.sleep(0.5)
 except Exception as e:
