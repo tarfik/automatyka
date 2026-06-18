@@ -2,7 +2,9 @@ import urequests
 import os
 import machine
 
-VERSION_URL = "https://raw.githubusercontent.com/tarfik/automatyka/main/version.json"
+
+GITHUB_URL = "https://raw.githubusercontent.com/tarfik/automatyka/refs/heads/main/"
+
 
 class OTA:
     def __init__(self):
@@ -10,7 +12,7 @@ class OTA:
 
     def update(self):
         try:
-            r = urequests.get(VERSION_URL)
+            r = urequests.get(GITHUB_URL+"version.json")
             data = r.json()
             r.close()
 
@@ -26,7 +28,7 @@ class OTA:
             print("OTA error:", e)
 
     def download(self, filename):
-        url = f"https://raw.githubusercontent.com/USER/REPO/main/{filename}"
+        url = GITHUB_URL+filename
         r = urequests.get(url)
 
         with open(filename, "w") as f:
