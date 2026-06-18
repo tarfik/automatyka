@@ -55,7 +55,7 @@ class MQTT:
                 self.motor.close()
                 time.sleep(10)
                 self.motor.stop()
-                self.publish("ZAMKNIĘTE")
+                self.publish("ZAMKNIETE")
 
             elif msg == "STOP":
                 self.motor.stop()
