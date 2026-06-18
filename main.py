@@ -36,6 +36,12 @@ def wifi_connect():
     last_wifi_ok = False
     return False
 
+def ensure_wifi():
+    if not wlan.isconnected():
+        return wifi_connect()
+    return True
+
+
 try:
     ntptime.settime()
     motor = Motor()
