@@ -17,6 +17,7 @@ class MQTT:
         self.motor = motor
         self.ota = ota
         self.last_mqtt_ok = None
+        self.client = None
 
     def connect(self):
         try:
@@ -47,15 +48,14 @@ class MQTT:
             return False
 
     def ensure_mqtt(self):
-        if mqtt is None:
-            return mqtt_connect()
-    
+        if self.client is None:
+            return self.connect()
         try:
-            mqtt.ping()
+            self.client.ping()
             return True
         except:
             print("[MQTT] reconnecting...")
-            return mqtt_connect()
+            return self.connect()
         
     def publish(self, msg):
         self.client.publish(TOPIC_STATUS, msg)
