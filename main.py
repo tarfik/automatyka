@@ -42,35 +42,32 @@ def ensure_wifi():
     return True
 
 
-try:
-    ntptime.settime()
-    motor = Motor()
-    ota = OTA()
-    mqtt = MQTT(motor, ota, mqtt_client_id, mqtt_host, mqtt_port, mqtt_user, mqtt_password)
+ntptime.settime()
+motor = Motor()
+ota = OTA()
+mqtt = MQTT(motor, ota, mqtt_client_id, mqtt_host, mqtt_port, mqtt_user, mqtt_password)
 
-    wifi_connect()
-    mqtt.connect()
+wifi_connect()
+mqtt.connect()
 
-    while True:
-        # watchdog feed
-        wdt.feed()
-        # WIFI check
-        if not ensure_wifi():
-            time.sleep(2)
-            continue
-    
-        # MQTT check
-        if not mqtt.ensure_mqtt():
-            time.sleep(2)
-            continue
+while True:
+    # watchdog feed
+    wdt.feed()
+    # WIFI check
+    if not ensure_wifi():
+        time.sleep(2)
+        continue
 
-        try:
-            mqtt.client.check_msg()
-        except Exception as err"
-            print("[MQTT loop error]", e)
-            mqtt_connect()
-            print("Error:", err)
-        time.sleep(0.5)
-except Exception as e:
-    print("Error:", e)
-    raise
+    # MQTT check
+    if not mqtt.ensure_mqtt():
+        time.sleep(2)
+        continue
+
+    try:
+        mqtt.client.check_msg()
+    except Exception as err"
+        print("[MQTT loop error]", e)
+        mqtt_connect()
+        print("Error:", err)
+    time.sleep(0.5)
+
