@@ -26,7 +26,10 @@ try:
     mqtt.connect()
 
     while True:
-        mqtt.client.check_msg()
+        try:
+            mqtt.client.check_msg()
+        except Exception as err"
+            print("Error:", err)
         time.sleep(0.5)
 except Exception as e:
     print("Error:", e)
