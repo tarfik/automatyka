@@ -18,24 +18,22 @@ class MQTT:
         self.ota = ota
         self.last_mqtt_ok = None
 
-        self.client = MQTTClient(
-            mqtt_client_id,
-            mqtt_host,
-            mqtt_port,
-            user=mqtt_user,
-            password=mqtt_password,
-            keepalive=60
-        )
-        self.client.set_callback(self.callback)
-
     def connect(self):
         try:
-            mqtt.set_last_will(TOPIC_STATUS, b"OFFLINE", retain=True)
+            self.client = MQTTClient(
+                mqtt_client_id,
+                mqtt_host,
+                mqtt_port,
+                user=mqtt_user,
+                password=mqtt_password,
+                keepalive=60
+            )
+            self.client.set_last_will(TOPIC_STATUS, b"OFFLINE", retain=True)
     
-            mqtt.set_callback(self.callback)
-            mqtt.connect()
+            self.client.set_callback(self.callback)
+            self.client.connect()
     
-            mqtt.subscribe(TOPIC_CMD)
+            self.client.subscribe(TOPIC_CMD)
     
             self.publish("ONLINE")
     
@@ -48,6 +46,17 @@ class MQTT:
             last_mqtt_ok = False
             return False
 
+    def ensure_mqtt(self):
+        if mqtt is None:
+            return mqtt_connect()
+    
+        try:
+            mqtt.ping()
+            return True
+        except:
+            print("[MQTT] reconnecting...")
+            return mqtt_connect()
+        
     def publish(self, msg):
         self.client.publish(TOPIC_STATUS, msg)
 
