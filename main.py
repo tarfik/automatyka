@@ -7,14 +7,34 @@ from ota import OTA
 from conf import wifi_ssid, wifi_password, mqtt_client_id, mqtt_host, mqtt_port, mqtt_user, mqtt_password
 import ntptime
 
-def wifi_connect():
-    wlan = network.WLAN(network.STA_IF)
-    wlan.active(True)
-    wlan.connect(wifi_ssid, wifi_password)
+wdt = machine.WDT(timeout=8000)
 
-    while not wlan.isconnected():
-        print('waiting for connection')
+last_wifi_ok = False
+last_mqtt_ok = False
+
+def wifi_connect():
+    global last_wifi_ok
+
+    wlan.active(True)
+
+    if wlan.isconnected():
+        last_wifi_ok = True
+        return True
+
+    print("[WiFi] Connecting...")
+
+    wlan.connect(WIFI_SSID, WIFI_PASS)
+
+    for _ in range(20):
+        if wlan.isconnected():
+            print("[WiFi] Connected:", wlan.ifconfig())
+            last_wifi_ok = True
+            return True
         time.sleep(1)
+
+    print("[WiFi] Failed")
+    last_wifi_ok = False
+    return False
 
 try:
     ntptime.settime()
