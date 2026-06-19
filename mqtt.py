@@ -16,17 +16,22 @@ class MQTT:
     def __init__(self, motor, ota, mqtt_client_id, mqtt_host, mqtt_port, mqtt_user, mqtt_password):
         self.motor = motor
         self.ota = ota
+        self.mqtt_client_id = mqtt_client_id
+        self.mqtt_host = mqtt_host
+        self.mqtt_port = mqtt_port
+        self.mqtt_user = mqtt_user
+        self.mqtt_password = mqtt_password
         self.last_mqtt_ok = None
         self.client = None
 
     def connect(self):
         try:
             self.client = MQTTClient(
-                mqtt_client_id,
-                mqtt_host,
-                mqtt_port,
-                user=mqtt_user,
-                password=mqtt_password,
+                self.mqtt_client_id,
+                self.mqtt_host,
+                self.mqtt_port,
+                user=self.mqtt_user,
+                password=self.mqtt_password,
                 keepalive=60
             )
             self.client.set_last_will(TOPIC_STATUS, b"OFFLINE", retain=True)
@@ -39,12 +44,12 @@ class MQTT:
             self.publish("ONLINE")
     
             print("[MQTT] Connected")
-            last_mqtt_ok = True
+            self.last_mqtt_ok = True
             return True
     
         except Exception as e:
             print("[MQTT] Connect failed:", e)
-            last_mqtt_ok = False
+            self.last_mqtt_ok = False
             return False
 
     def ensure_mqtt(self):
@@ -53,34 +58,43 @@ class MQTT:
         try:
             self.client.ping()
             return True
-        except:
+        except Exception:
             print("[MQTT] reconnecting...")
             return self.connect()
+
+    def process(self):
+        # Reserved for future periodic MQTT-related work.
+        return
         
     def publish(self, msg):
+        if self.client is None:
+            return
+
+        if isinstance(msg, str):
+            msg = msg.encode()
         self.client.publish(TOPIC_STATUS, msg)
 
     def log(self, msg):
+        if self.client is None:
+            return
+
+        if isinstance(msg, str):
+            msg = msg.encode()
         self.client.publish(TOPIC_LOG, msg)
 
     def callback(self, topic, msg):
         try:
-            msg = msg.decode()
+            if isinstance(msg, bytes):
+                msg = msg.decode()
             self.log("On {} received command: {}".format(get_time_pl(), msg))
 
             if msg == "OPEN":
                 self.publish("OTWIERANIE")
                 self.motor.open()
-                time.sleep(10)
-                self.motor.stop()
-                self.publish("OTWARTE")
 
             elif msg == "CLOSE":
                 self.publish("ZAMYKANIE")
                 self.motor.close()
-                time.sleep(10)
-                self.motor.stop()
-                self.publish("ZAMKNIETE")
 
             elif msg == "STOP":
                 self.motor.stop()
