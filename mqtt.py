@@ -23,6 +23,10 @@ class MQTT:
         self.mqtt_password = mqtt_password
         self.last_mqtt_ok = None
         self.client = None
+        self.scheduled_open_time = "07:00"  # Default: open at 7:00
+        self.scheduled_close_time = "21:00"  # Default: close at 21:00
+        self.scheduling_enabled = True  # Flag to enable/disable scheduling
+        self.last_triggered_minute = None  # Track to avoid multiple triggers in same minute
 
     def connect(self):
         try:
@@ -63,8 +67,27 @@ class MQTT:
             return self.connect()
 
     def process(self):
-        # Reserved for future periodic MQTT-related work.
-        return
+        # Check scheduled open/close times (only if scheduling is enabled)
+        if not self.scheduling_enabled:
+            return
+            
+        t = time.localtime(time.time() + 3600)
+        current_time = "{:02d}:{:02d}".format(t[3], t[4])
+        current_minute = (t[3], t[4])
+        
+        # Avoid triggering multiple times in same minute
+        if self.last_triggered_minute != current_minute:
+            if self.scheduled_open_time and current_time == self.scheduled_open_time:
+                self.log("Scheduled opening at {}".format(current_time))
+                self.publish("OTWIERANIE")
+                self.motor.open()
+                self.last_triggered_minute = current_minute
+            
+            elif self.scheduled_close_time and current_time == self.scheduled_close_time:
+                self.log("Scheduled closing at {}".format(current_time))
+                self.publish("ZAMYKANIE")
+                self.motor.close()
+                self.last_triggered_minute = current_minute
         
     def publish(self, msg):
         if self.client is None:
@@ -103,5 +126,70 @@ class MQTT:
             elif msg == "UPDATE":
                 self.publish("AKTUALIZACJA")
                 self.ota.update()
+            
+            elif msg.startswith("SET_OPEN_TIME "):
+                time_str = msg.split(" ", 1)[1]
+                try:
+                    # Validate time format HH:MM
+                    parts = time_str.split(":")
+                    if len(parts) == 2:
+                        hour = int(parts[0])
+                        minute = int(parts[1])
+                        if 0 <= hour <= 23 and 0 <= minute <= 59:
+                            self.scheduled_open_time = time_str
+                            self.publish("OPEN_TIME_SET: {}".format(time_str))
+                            self.log("Open time scheduled: {}".format(time_str))
+                        else:
+                            self.publish("ERROR: Invalid time")
+                            self.log("Invalid open time: {}".format(time_str))
+                    else:
+                        self.publish("ERROR: Use format HH:MM")
+                        self.log("Invalid time format: {}".format(time_str))
+                except Exception as e:
+                    self.publish("ERROR: {}".format(e))
+                    self.log("Error setting open time: {}".format(e))
+            
+            elif msg.startswith("SET_CLOSE_TIME "):
+                time_str = msg.split(" ", 1)[1]
+                try:
+                    # Validate time format HH:MM
+                    parts = time_str.split(":")
+                    if len(parts) == 2:
+                        hour = int(parts[0])
+                        minute = int(parts[1])
+                        if 0 <= hour <= 23 and 0 <= minute <= 59:
+                            self.scheduled_close_time = time_str
+                            self.publish("CLOSE_TIME_SET: {}".format(time_str))
+                            self.log("Close time scheduled: {}".format(time_str))
+                        else:
+                            self.publish("ERROR: Invalid time")
+                            self.log("Invalid close time: {}".format(time_str))
+                    else:
+                        self.publish("ERROR: Use format HH:MM")
+                        self.log("Invalid time format: {}".format(time_str))
+                except Exception as e:
+                    self.publish("ERROR: {}".format(e))
+                    self.log("Error setting close time: {}".format(e))
+            
+            elif msg == "GET_SCHEDULE":
+                status = "ON" if self.scheduling_enabled else "OFF"
+                schedule_msg = "SCHEDULE: {}, OPEN: {}, CLOSE: {}".format(
+                    status,
+                    self.scheduled_open_time or "not set",
+                    self.scheduled_close_time or "not set"
+                )
+                self.publish(schedule_msg)
+                self.log("Schedule: {}".format(schedule_msg))
+            
+            elif msg == "SCHEDULE_OFF":
+                self.scheduling_enabled = False
+                self.publish("SCHEDULING_DISABLED")
+                self.log("Scheduling disabled")
+            
+            elif msg == "SCHEDULE_ON":
+                self.scheduling_enabled = True
+                self.publish("SCHEDULING_ENABLED")
+                self.log("Scheduling enabled")
+                
         except Exception as e:
             self.log("Error in callback: {}".format(e))
