@@ -1,5 +1,6 @@
 from umqtt.simple import MQTTClient
 import time
+import json
 
 
 TOPIC_CMD = b"drzwi/cmd"
@@ -23,10 +24,12 @@ class MQTT:
         self.mqtt_password = mqtt_password
         self.last_mqtt_ok = None
         self.client = None
+        self.config_file = "schedule_config.json"
         self.scheduled_open_time = "07:00"  # Default: open at 7:00
         self.scheduled_close_time = "21:00"  # Default: close at 21:00
         self.scheduling_enabled = True  # Flag to enable/disable scheduling
         self.last_triggered_minute = None  # Track to avoid multiple triggers in same minute
+        self.load_config()  # Load config from file if exists
 
     def connect(self):
         try:
@@ -65,6 +68,33 @@ class MQTT:
         except Exception:
             print("[MQTT] reconnecting...")
             return self.connect()
+
+    def load_config(self):
+        """Load scheduling configuration from file"""
+        try:
+            with open(self.config_file, 'r') as f:
+                config = json.load(f)
+                self.scheduled_open_time = config.get("open_time", "07:00")
+                self.scheduled_close_time = config.get("close_time", "21:00")
+                self.scheduling_enabled = config.get("enabled", True)
+                print("[MQTT] Config loaded from {}".format(self.config_file))
+        except Exception as e:
+            print("[MQTT] No config file found or error reading: {}".format(e))
+            # Use defaults
+
+    def save_config(self):
+        """Save scheduling configuration to file"""
+        try:
+            config = {
+                "open_time": self.scheduled_open_time,
+                "close_time": self.scheduled_close_time,
+                "enabled": self.scheduling_enabled
+            }
+            with open(self.config_file, 'w') as f:
+                json.dump(config, f)
+            print("[MQTT] Config saved to {}".format(self.config_file))
+        except Exception as e:
+            print("[MQTT] Error saving config: {}".format(e))
 
     def process(self):
         # Check scheduled open/close times (only if scheduling is enabled)
@@ -137,6 +167,7 @@ class MQTT:
                         minute = int(parts[1])
                         if 0 <= hour <= 23 and 0 <= minute <= 59:
                             self.scheduled_open_time = time_str
+                            self.save_config()
                             self.publish("OPEN_TIME_SET: {}".format(time_str))
                             self.log("Open time scheduled: {}".format(time_str))
                         else:
@@ -159,6 +190,7 @@ class MQTT:
                         minute = int(parts[1])
                         if 0 <= hour <= 23 and 0 <= minute <= 59:
                             self.scheduled_close_time = time_str
+                            self.save_config()
                             self.publish("CLOSE_TIME_SET: {}".format(time_str))
                             self.log("Close time scheduled: {}".format(time_str))
                         else:
@@ -183,11 +215,13 @@ class MQTT:
             
             elif msg == "SCHEDULE_OFF":
                 self.scheduling_enabled = False
+                self.save_config()
                 self.publish("SCHEDULING_DISABLED")
                 self.log("Scheduling disabled")
             
             elif msg == "SCHEDULE_ON":
                 self.scheduling_enabled = True
+                self.save_config()
                 self.publish("SCHEDULING_ENABLED")
                 self.log("Scheduling enabled")
                 
